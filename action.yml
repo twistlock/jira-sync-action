@@ -1,0 +1,37 @@
+name: 'Jira issue sync'
+description: ''
+inputs:
+  GITHUB_TOKEN:
+    description: 'Github API token (automatically filled)'
+    required: true
+    default: null
+  JIRA_USEREMAIL:
+    description: 'Jira token user email'
+    required: true
+    default: 'BLANK'
+  JIRA_APITOKEN:
+    description: 'JIRA API token'
+    required: true
+    default: null
+  JIRA_PROJECTKEY:
+    description: 'the key (prefix) used by JIRA for the project'
+    required: true
+    default: ''
+  JIRA_URL:
+    description: 'JIRA URL'
+    required: true
+    default: 'url'
+  GITHUB_ISSUE:
+    description: 'Issue ID'
+    required: true
+    default: null
+
+outputs:
+  status:
+    description: 'The status of the sync'
+  time:
+    description: 'when was the sync finished'
+
+runs:
+  using: docker
+  image: Dockerfile
