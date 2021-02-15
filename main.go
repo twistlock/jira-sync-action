@@ -50,7 +50,7 @@ func mkGithubConfig() (*githubConfig, error) {
 		return nil, fmt.Errorf("invalid repo %v", repo)
 	}
 
-	v := input("GITHUB_ISSUE")
+	v := input("GITHUB_ISSUE_NUMBER")
 	if v == "" {
 		return nil, fmt.Errorf("missing GH issue")
 	}
@@ -157,6 +157,7 @@ type jiraConfig struct {
 	user     string
 	password string
 	project  string
+	state    string
 }
 
 func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
@@ -190,13 +191,12 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 
 	// Create issue with the same title as GH issue
 	title := stringify(githubIssue.issue.Title)
-	jql := fmt.Sprintf("project = \"%s\" AND summary ~ \"%s\"", project.ID, title)
+	jql := fmt.Sprintf("project = %s AND summary ~ \"%s\"", project.Name, url.QueryEscape(title))
 	issues, _, err := jiraClient.Issue.Search(jql, nil)
 
 	if err != nil {
 		return err
 	}
-
 	var fn func(issue *jira.Issue) (*jira.Issue, *jira.Response, error)
 
 	var id int
@@ -209,13 +209,26 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 	if githubIssue.issue.Assignee != nil {
 		assignee = users[stringify(githubIssue.issue.Assignee.Login)]
 	}
+
+	// https://docs.github.com/en/rest/reference/issues
+	var labels []string
+
+	// Add state as label, as it's not possible to close issues in JIRA
+	// https://community.atlassian.com/t5/Jira-questions/No-close-issue-button/qaq-p/267132
+	if state := stringify(githubIssue.issue.State); state != "" {
+		labels = []string{state}
+	}
+
 	jiraIssue := jira.Issue{
 		Key: strconv.Itoa(id),
 		Fields: &jira.IssueFields{
 			Project: *project,
+			Labels:  labels,
 			Type:    jira.IssueType{Name: "Task"},
 			Summary: title,
-			Description: stringify(githubIssue.issue.URL) +
+			Description: stringify(githubIssue.issue.User.Login) +
+				"\n" +
+				stringify(githubIssue.issue.HTMLURL) +
 				"\n" +
 				stringify(githubIssue.issue.Body),
 			Assignee: assignee,

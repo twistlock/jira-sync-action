@@ -21,8 +21,8 @@ inputs:
     description: 'JIRA URL'
     required: true
     default: 'url'
-  GITHUB_ISSUE:
-    description: 'Issue ID'
+  GITHUB_ISSUE_NUMBER:
+    description: 'Github issue number'
     required: true
     default: null
 
