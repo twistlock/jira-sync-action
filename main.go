@@ -191,8 +191,13 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 
 	// Create issue with the same title as GH issue
 	title := stringify(githubIssue.issue.Title)
-	jql := fmt.Sprintf("project = %s AND summary ~ \"%s\"", project.Name, url.QueryEscape(title))
+	// Remove `-` from query
+	normalizedSummary := strings.Replace(title, "-", " ", -1)
+	// Remove unsupported charts
+	jql := fmt.Sprintf("project = %s AND summary ~ \"%s\"", project.Name, normalizedSummary)
 	issues, _, err := jiraClient.Issue.Search(jql, nil)
+
+	fmt.Printf("Found %d existing issues for jql: %s\n", len(issues), jql)
 
 	if err != nil {
 		return err
@@ -215,7 +220,8 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 
 	// Add state as label, as it's not possible to close issues in JIRA
 	// https://community.atlassian.com/t5/Jira-questions/No-close-issue-button/qaq-p/267132
-	if state := stringify(githubIssue.issue.State); state != "" {
+	state := stringify(githubIssue.issue.State)
+	if state != "" {
 		labels = []string{state}
 	}
 
@@ -257,6 +263,26 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 				Body: githubIssue.nameByLoginID[stringify(comment.User.Login)] + "\n" + stringify(comment.Body),
 			}); err != nil {
 				return err
+			}
+		}
+
+		// Update issue state
+		// https://docs.github.com/en/rest/reference/issues#list-issues-assigned-to-the-authenticated-user--parameters
+		if state != "" {
+			transitions, _, err := jiraClient.Issue.GetTransitions(issues[0].ID)
+			if err != nil {
+				return err
+			}
+			// https://docs.github.com/en/rest/reference/issues#list-issues-assigned-to-the-authenticated-user--parameters
+			const closedState = "closed"
+			for _, transition := range transitions {
+				if (strings.Contains(strings.ToLower(transition.Name), "done") && state == closedState) ||
+					(strings.Contains(strings.ToLower(transition.Name), "progress") && state != closedState) {
+					if _, err := jiraClient.Issue.DoTransition(issues[0].ID, transition.ID); err != nil {
+						return err
+					}
+					break
+				}
 			}
 		}
 
