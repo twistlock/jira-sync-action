@@ -187,13 +187,10 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 		for i := range jiraUsers { // Ensure we got the correct user
 			if strings.Contains(strings.ToLower(jiraUsers[i].DisplayName), strings.ToLower(name)) {
 				users[loginID] = &jiraUsers[i]
-				fmt.Println("asd", users[loginID])
 				break
 			}
 		}
 	}
-
-	return nil
 
 	// Create issue with the same title as GH issue
 	title := stringify(githubIssue.issue.Title)
