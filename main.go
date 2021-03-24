@@ -237,6 +237,8 @@ func syncIssue(config *jiraConfig, githubIssue *githubIssue) error {
 			Summary: title,
 			Description: stringify(githubIssue.issue.User.Login) +
 				"\n" +
+				fmt.Sprintf("Github issue ID: %d", githubIssue.issue.GetNumber()) +
+				"\n" +
 				stringify(githubIssue.issue.HTMLURL) +
 				"\n" +
 				stringify(githubIssue.issue.Body),
